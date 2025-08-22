@@ -12,5 +12,4 @@
 #SBATCH -J "fsc_DL"   # job name
 #SBATCH -o "output.txt"   # job output file
 
-conda activate pytorchenv
 python training/binarymodel_training.py
