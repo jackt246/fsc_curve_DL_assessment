@@ -12,4 +12,4 @@
 #SBATCH -J "fsc_DL"   # job name
 #SBATCH -o "output.txt"   # job output file
 
-python training/binarymodel_training.py
+python training/binarymodel.py
