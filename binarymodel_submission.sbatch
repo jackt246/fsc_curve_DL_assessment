@@ -12,4 +12,5 @@
 #SBATCH -J "fsc_DL"   # job name
 #SBATCH -o "output.txt"   # job output file
 
+export TORCH_HOME=/hps/nobackup/gerard/emdb/fsc_curve_DL_assessment/
 python training/binarymodel.py
