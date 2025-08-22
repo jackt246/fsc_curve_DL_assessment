@@ -12,105 +12,81 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 import csv
+from torchvision import models
 
-# Set the device to GPU if available, otherwise CPU
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Fix SSL certificate issue for torchvision model downloads on macOS
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Set the device to GPU if available, otherwise CPU (with MPS support for Apple Silicon)
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
 print(f"Using device: {device}")
 
-MODEL_SAVE_PATH = "binary_cnn_model.pth"  # Path to save the trained model weights
+MODEL_SAVE_PATH = "../inference/typicality_model.pth"  # Path to save the trained model weights
 
 # Hyperparameters
-BATCH_SIZE = 16
-LEARNING_RATE = 0.001
-NUM_EPOCHS = 15
-IMAGE_SIZE = 200 # All images will be resized to this (e.g., 64x64 pixels)
+BATCH_SIZE = 32
+LEARNING_RATE = 1e-3
+NUM_EPOCHS = 25
 
-# Define transformations for the images
-# 1. Resize: Ensures all images have the same dimensions.
-# 2. ToTensor: Converts PIL Image or NumPy array to PyTorch tensor (HWC to CHW, scales to [0,1]).
-# 3. Normalize: Standardizes pixel values (mean, std deviation for each channel).
-#    These values (0.5, 0.5, 0.5) are common for images, but you might calculate
-#    them from your specific dataset for better performance.
-transform = transforms.Compose([
-    transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+# Load pretrained EfficientNetV2 with ImageNet1k_V1 weights
+weights = models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
+model = models.efficientnet_v2_s(weights=weights)
+
+# Separate transforms for training and validation/test
+# Compose training transform with augmentations, then tensor/normalize with weights' mean and std
+train_transform = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(10),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+    transforms.RandomResizedCrop(224, scale=(0.9, 1.0)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    transforms.Normalize(mean=weights.transforms().mean, std=weights.transforms().std)
 ])
+test_transform = weights.transforms()
 
-# Load the dataset using ImageFolder
-# ImageFolder expects data organized as:
-# root/class_0/xxx.png
-# root/class_1/yyy.png
-# It automatically assigns labels based on folder names.
-dataset = datasets.ImageFolder(root="trainingdata", transform=transform)
+# This could probably be one line but I am keeping it explicit for clarity and because im too lazy to refactor it
+# on friday afternoon.
+base_dataset = datasets.ImageFolder(root="trainingdata/Typicality")
+dataset = base_dataset  # Keep reference for later use (e.g., image_path lookups)
 
-# Split the dataset into training and testing sets
-total_size = len(dataset)
-train_size = int(0.5 * total_size)
-val_size = int(0.3 * total_size)
+# Split the dataset
+total_size = len(base_dataset)
+train_size = int(0.6 * total_size)
+val_size = int(0.2 * total_size)
 test_size = total_size - train_size - val_size
 
-# First split: Separate out the test set
-train_val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size + val_size, test_size])
-
-# Second split: Separate train and validation from the remaining dataset
+train_val_dataset, test_dataset = torch.utils.data.random_split(base_dataset, [train_size + val_size, test_size])
 train_dataset, val_dataset = torch.utils.data.random_split(train_val_dataset, [train_size, val_size])
+
+# Apply transforms individually
+train_dataset.dataset.transform = train_transform
+val_dataset.dataset.transform = test_transform
+test_dataset.dataset.transform = test_transform
 
 
 # Create DataLoaders for batching and shuffling
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False) # No need to shuffle validation
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 print(f"Training samples: {len(train_dataset)}")
 print(f"Validation samples: {len(val_dataset)}")
 print(f"Testing samples: {len(test_dataset)}")
-print(f"Classes: {dataset.classes}") # Should now reflect 'Atypical' and 'Typical'
 
-# --- 3. Model Definition (Simple CNN) ---
-class BinaryCNN(nn.Module):
-    def __init__(self):
-        super(BinaryCNN, self).__init__()
-        # Convolutional Layer 1
-        # Input: (Batch_size, 3, IMAGE_SIZE, IMAGE_SIZE) -> 3 channels for RGB
-        # Output: (Batch_size, 16, IMAGE_SIZE/2, IMAGE_SIZE/2) after MaxPool
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # Convolutional Layer 2
-        # Input: (Batch_size, 16, IMAGE_SIZE/2, IMAGE_SIZE/2)
-        # Output: (Batch_size, 32, IMAGE_SIZE/4, IMAGE_SIZE/4) after MaxPool
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # Fully Connected Layer
-        # Calculate input features for the first linear layer.
-        # After two pooling layers with stride 2, the image dimensions are reduced by 2^2 = 4.
-        # So, IMAGE_SIZE / 4 is the dimension.
-        # 32 is the number of output channels from the last conv layer.
-        self.fc_input_features = 32 * (IMAGE_SIZE // 4) * (IMAGE_SIZE // 4)
-        self.fc = nn.Linear(self.fc_input_features, 1) # Output 1 for binary classification
+# Modify the classifier for binary classification
+num_features = model.classifier[1].in_features
+model.classifier[1] = nn.Linear(num_features, 1)
 
-    def forward(self, x):
-        # Pass through Conv1 -> ReLU -> Pool1
-        x = self.pool1(self.relu1(self.conv1(x)))
-        # Pass through Conv2 -> ReLU -> Pool2
-        x = self.pool2(self.relu2(self.conv2(x)))
-
-        # Flatten the output for the fully connected layer
-        # x.view(-1, self.fc_input_features) reshapes the tensor.
-        # -1 means infer the batch size, self.fc_input_features is the total features per image.
-        x = x.view(-1, self.fc_input_features)
-
-        # Pass through the fully connected layer
-        # No sigmoid here, as BCEWithLogitsLoss handles it internally for numerical stability.
-        x = self.fc(x)
-        return x
-
-# Instantiate the model and move it to the device
-model = BinaryCNN().to(device)
+# Send to device
+model = model.to(device)
 print("\nModel Architecture:")
 print(model)
 
@@ -120,7 +96,7 @@ print(model)
 criterion = nn.BCEWithLogitsLoss()
 
 # Adam optimizer is a good general-purpose optimizer.
-optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9, nesterov=True)
 
 # --- 5. Training the Model ---
 print("\nStarting Training...")
@@ -129,6 +105,11 @@ for epoch in range(NUM_EPOCHS):
     running_loss = 0.0
     correct_predictions = 0
     total_predictions = 0
+
+    all_train_preds = []
+    all_train_labels = []
+    all_val_preds = []
+    all_val_labels = []
 
     for batch_idx, (inputs, labels) in enumerate(train_loader):
         inputs, labels = inputs.to(device), labels.to(device).float().unsqueeze(1) # Labels need to be float and shape (batch_size, 1)
@@ -154,9 +135,22 @@ for epoch in range(NUM_EPOCHS):
         total_predictions += labels.size(0)
         correct_predictions += (predicted == labels).sum().item()
 
+        # Store for precision calculation
+        all_train_preds.extend(predicted.cpu().numpy())
+        all_train_labels.extend(labels.cpu().numpy())
+
+
     epoch_loss = running_loss / len(train_loader)
     epoch_accuracy = correct_predictions / total_predictions * 100
-    print(f"Epoch [{epoch+1}/{NUM_EPOCHS}], Training Loss: {epoch_loss:.4f}, Training Accuracy: {epoch_accuracy:.2f}%")
+    epoch_precision = precision_score(all_train_labels, all_train_preds, zero_division=0)
+    epoch_recall = recall_score(all_train_labels, all_train_preds, zero_division=0)
+    epoch_f1 = f1_score(all_train_labels, all_train_preds, zero_division=0)
+    print(f"Training: Epoch [{epoch + 1}/{NUM_EPOCHS}], "
+          f"Loss: {epoch_loss:.4f}, "
+          f"Accuracy: {epoch_accuracy:.2f}%, "
+          f"Precision: {epoch_precision:.4f}, "
+          f"Recall: {epoch_recall:.4f}, "
+          f"F1 Score: {epoch_f1:.4f}")
 
     # --- Validation Phase ---
     model.eval() # Set the model to evaluation mode for validation
@@ -174,9 +168,25 @@ for epoch in range(NUM_EPOCHS):
             val_total_predictions += labels.size(0)
             val_correct_predictions += (predicted == labels).sum().item()
 
+            # Store for precision calculation
+            all_val_preds.extend(predicted.cpu().numpy())
+            all_val_labels.extend(labels.cpu().numpy())
+
     val_loss = val_running_loss / len(val_loader)
     val_accuracy = val_correct_predictions / val_total_predictions * 100
-    print(f"          Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%")
+    val_precision = precision_score(all_val_labels, all_val_preds, zero_division=0)
+    val_recall = recall_score(all_val_labels, all_val_preds, zero_division=0)
+    val_f1 = f1_score(all_val_labels, all_val_preds, zero_division=0)
+    print(f"Validation: Epoch [{epoch + 1}/{NUM_EPOCHS}], "
+          f"Loss: {val_loss:.4f}, "
+          f"Accuracy: {val_accuracy:.2f}%, "
+          f"Precision: {val_precision:.4f}, "
+          f"Recall: {val_recall:.4f}, "
+          f"F1 Score: {val_f1:.4f}")
+
+    if val_f1 > 0.98:
+        print(f"Stopping early as F1 score reached {val_f1:.4f}")
+        continue
 
 print("Training Complete!")
 
@@ -235,15 +245,18 @@ pos_label_idx = dataset.class_to_idx.get('Typical', 1) # Default to 1 if not fou
 all_labels_int = all_labels.astype(int)
 all_predictions_int = all_predictions.astype(int)
 
-# Calculate F1-score, Precision, and Recall
-# Specify pos_label for binary classification if needed, based on your class definition
-f1 = f1_score(all_labels_int, all_predictions_int, pos_label=pos_label_idx)
-precision = precision_score(all_labels_int, all_predictions_int, pos_label=pos_label_idx)
-recall = recall_score(all_labels_int, all_predictions_int, pos_label=pos_label_idx)
+# Calculate per-class F1, Precision, and Recall
+f1_scores = f1_score(all_labels_int, all_predictions_int, average=None, labels=[0,1])
+precision_scores = precision_score(all_labels_int, all_predictions_int, average=None, labels=[0,1])
+recall_scores = recall_score(all_labels_int, all_predictions_int, average=None, labels=[0,1])
 
-print(f"F1-Score (for {dataset.classes[pos_label_idx]}): {f1:.4f}")
-print(f"Precision (for {dataset.classes[pos_label_idx]}): {precision:.4f}")
-print(f"Recall (for {dataset.classes[pos_label_idx]}): {recall:.4f}")
+print(f"F1-Score (for {dataset.classes[0]}): {f1_scores[0]:.4f}")
+print(f"Precision (for {dataset.classes[0]}): {precision_scores[0]:.4f}")
+print(f"Recall (for {dataset.classes[0]}): {recall_scores[0]:.4f}")
+
+print(f"F1-Score (for {dataset.classes[1]}): {f1_scores[1]:.4f}")
+print(f"Precision (for {dataset.classes[1]}): {precision_scores[1]:.4f}")
+print(f"Recall (for {dataset.classes[1]}): {recall_scores[1]:.4f}")
 
 # Calculate Confusion Matrix
 cm = confusion_matrix(all_labels_int, all_predictions_int)

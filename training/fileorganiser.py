@@ -40,13 +40,13 @@ def get_label_studio_information(csv_path):
 
     return final_df
 
-df = get_label_studio_information('../Labelling/project-1-at-2025-08-05-18-56-18fbc8e2.csv')
+df = get_label_studio_information('../Labelling/project-1-at-2025-08-19-07-53-06d9b5d0.csv')
 
 for i in range(len(df)):
     emd_id = df.iloc[i]['EMD-ID']
     choice = df.iloc[i]['Type']
     fsc_path = f'../dataprepscripts/fscplots/{emd_id}.png'
-    target_path = f'trainingdata/{choice}/{emd_id}.png'
+    target_path = f'trainingdata/Typicality/{choice}/{emd_id}.png'
     if os.path.exists(fsc_path):
         shutil.copy(fsc_path, target_path)
     else:
