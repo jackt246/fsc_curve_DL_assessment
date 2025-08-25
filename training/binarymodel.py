@@ -96,7 +96,7 @@ print(model)
 criterion = nn.BCEWithLogitsLoss()
 
 # Adam optimizer is a good general-purpose optimizer.
-optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9, nesterov=True)
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 # --- 5. Training the Model ---
 print("\nStarting Training...")
