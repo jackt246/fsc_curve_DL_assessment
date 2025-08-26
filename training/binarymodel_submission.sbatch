@@ -12,5 +12,19 @@
 #SBATCH -J "fsc_DL"   # job name
 #SBATCH -o "output.txt"   # job output file
 
+# start GPU logging in the background
+(
+  while true; do
+      nvidia-smi --query-gpu=timestamp,index,utilization.gpu,utilization.memory,memory.used,memory.total --format=csv >> gpu_usage.log
+      sleep 600
+  done
+) &
+
+# save the PID so we can kill it later
+LOGGER_PID=$!
+
 export TORCH_HOME=/hps/nobackup/gerard/emdb/fsc_curve_DL_assessment/
 python binarymodel.py
+
+# stop the logging loop
+kill $LOGGER_PID
