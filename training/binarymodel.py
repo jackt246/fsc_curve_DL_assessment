@@ -73,7 +73,21 @@ test_dataset.dataset.transform = test_transform
 class_counts = Counter([label for _, label in dataset.samples])
 print(f"Class counts: {class_counts}")
 # Calculate pos_weight for BCEWithLogitsLoss to handle class imbalance
+# pos_weight should be minority_class / majority_class to upweight the minority class
 pos_weight = torch.tensor([class_counts[0] / class_counts[1]], device=device)
+
+# But we need to determine which is actually the minority class
+if class_counts[0] < class_counts[1]:
+    # Class 0 is minority, Class 1 is majority
+    pos_weight = torch.tensor([class_counts[1] / class_counts[0]], device=device)
+    print(f"Class 0 ({dataset.classes[0]}) is minority with {class_counts[0]} samples")
+    print(f"Class 1 ({dataset.classes[1]}) is majority with {class_counts[1]} samples")
+else:
+    # Class 1 is minority, Class 0 is majority
+    pos_weight = torch.tensor([class_counts[0] / class_counts[1]], device=device)
+    print(f"Class 1 ({dataset.classes[1]}) is minority with {class_counts[1]} samples")
+    print(f"Class 0 ({dataset.classes[0]}) is majority with {class_counts[0]} samples")
+
 print(f"Using pos_weight: {pos_weight.item():.4f}")
 
 # Create DataLoaders for batching and shuffling
