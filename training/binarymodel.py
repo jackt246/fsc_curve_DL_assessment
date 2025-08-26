@@ -3,16 +3,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-import os
-import shutil
-from PIL import Image
-import random
 from sklearn.metrics import f1_score, precision_score, recall_score, confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 import csv
 from torchvision import models
+from collections import Counter
 
 # Fix SSL certificate issue for torchvision model downloads on macOS
 import ssl
@@ -41,10 +38,10 @@ model = models.efficientnet_v2_s(weights=weights)
 # Separate transforms for training and validation/test
 # Compose training transform with augmentations, then tensor/normalize with weights' mean and std
 train_transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(10),
+#    transforms.RandomHorizontalFlip(),
+#    transforms.RandomRotation(10),
     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-    transforms.RandomResizedCrop(224, scale=(0.9, 1.0)),
+#    transforms.RandomResizedCrop(224, scale=(0.9, 1.0)),
     transforms.ToTensor(),
     transforms.Normalize(mean=weights.transforms().mean, std=weights.transforms().std)
 ])
@@ -69,6 +66,11 @@ train_dataset.dataset.transform = train_transform
 val_dataset.dataset.transform = test_transform
 test_dataset.dataset.transform = test_transform
 
+class_counts = Counter([label for _, label in dataset.samples])
+print(f"Class counts: {class_counts}")
+# Calculate pos_weight for BCEWithLogitsLoss to handle class imbalance
+pos_weight = torch.tensor([class_counts[0] / class_counts[1]], device=device)
+print(f"Using pos_weight: {pos_weight.item():.4f}")
 
 # Create DataLoaders for batching and shuffling
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -93,7 +95,7 @@ print(model)
 # --- 4. Loss Function and Optimizer ---
 # BCEWithLogitsLoss combines Sigmoid and Binary Cross Entropy Loss.
 # It's more numerically stable than using Sigmoid + BCELoss separately.
-criterion = nn.BCEWithLogitsLoss()
+criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
 # Adam optimizer is a good general-purpose optimizer.
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
