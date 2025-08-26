@@ -16,7 +16,7 @@
 (
   while true; do
       nvidia-smi --query-gpu=timestamp,index,utilization.gpu,utilization.memory,memory.used,memory.total --format=csv >> gpu_usage.log
-      sleep 600
+      sleep 60
   done
 ) &
 
