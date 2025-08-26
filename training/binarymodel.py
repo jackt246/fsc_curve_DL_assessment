@@ -10,10 +10,14 @@ import itertools
 import csv
 from torchvision import models
 from collections import Counter
-
+import os
 # Fix SSL certificate issue for torchvision model downloads on macOS
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
+
+#Codon environment setup
+os.system('module load cuda-11.1.1-gcc-9.3.0-oqr2b7d')
+os.system('module load cudnn-8.0.4.30-11.1-gcc-9.3.0-bbr3kjv')
 
 # Set the device to GPU if available, otherwise CPU (with MPS support for Apple Silicon)
 if torch.cuda.is_available():

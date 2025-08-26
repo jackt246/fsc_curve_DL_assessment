@@ -23,7 +23,6 @@
 # save the PID so we can kill it later
 LOGGER_PID=$!
 
-module load cuda/11.1
 export TORCH_HOME=/hps/nobackup/gerard/emdb/fsc_curve_DL_assessment/
 python binarymodel.py
 
