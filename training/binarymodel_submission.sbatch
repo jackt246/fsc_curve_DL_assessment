@@ -13,6 +13,9 @@
 #SBATCH -o "output.txt"   # job output file
 
 # start GPU logging in the background
+module load cuda-11.1.1-gcc-9.3.0-oqr2b7d
+module load cudnn-8.0.4.30-11.1-gcc-9.3.0-bbr3kjv
+
 (
   while true; do
       nvidia-smi --query-gpu=timestamp,index,utilization.gpu,utilization.memory,memory.used,memory.total --format=csv >> gpu_usage.log
