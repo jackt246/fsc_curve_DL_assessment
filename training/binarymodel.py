@@ -79,35 +79,18 @@ train_dataset.dataset.transform = train_transform
 val_dataset.dataset.transform = test_transform
 test_dataset.dataset.transform = test_transform
 
-class_counts = Counter([label for _, label in dataset.samples])
-print(f"Class counts: {class_counts}")
 # Calculate pos_weight for BCEWithLogitsLoss to handle class imbalance
-# pos_weight should be minority_class / majority_class to upweight the minority class
-pos_weight = torch.tensor([class_counts[0] / class_counts[1]], device=device)
+class_counts = Counter([label for _, label in dataset.samples])
+minority_class = 1  # 1_Atypical is always positive class now
+majority_class = 0
 
-# But we need to determine which is actually the minority class
-if class_counts[0] < class_counts[1]:
-    # Class 0 is minority, Class 1 is majority
-    pos_weight = torch.tensor([class_counts[1] / class_counts[0]], device=device)
-    print(f"Class 0 ({dataset.classes[0]}) is minority with {class_counts[0]} samples")
-    print(f"Class 1 ({dataset.classes[1]}) is majority with {class_counts[1]} samples")
-else:
-    # Class 1 is minority, Class 0 is majority
-    pos_weight = torch.tensor([class_counts[0] / class_counts[1]], device=device)
-    print(f"Class 1 ({dataset.classes[1]}) is minority with {class_counts[1]} samples")
-    print(f"Class 0 ({dataset.classes[0]}) is majority with {class_counts[0]} samples")
-
+pos_weight = torch.tensor([class_counts[majority_class] / class_counts[minority_class]], device=device)
+print(f"Class counts: {class_counts}")
 print(f"Using pos_weight: {pos_weight.item():.4f}")
 
-# Compute sample weights for WeightedRandomSampler to handle class imbalance
-train_labels = [label for _, label in train_dataset]
-class_sample_counts = Counter(train_labels)
-num_samples = len(train_labels)
-weights = [1.0 / class_sample_counts[label] for label in train_labels]
-sampler = WeightedRandomSampler(weights, num_samples=num_samples, replacement=True)
 
 # Create DataLoaders for batching
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
@@ -255,7 +238,7 @@ with torch.no_grad(): # Disable gradient calculation during evaluation
             "Image Path": image_path,
             "True Label": dataset.classes[true_label_idx],
             "Predicted Label": dataset.classes[int(predicted_label_idx)],
-            "Predicted Probability (Typical)": f"{probability:.4f}", # Assuming 'Typical' is class 1
+            "Predicted Probability (0_Typical)": f"{probability:.4f}", # Assuming '0_Typical' is class 1
             "Result": is_correct
         })
 
@@ -268,9 +251,9 @@ all_predictions = np.array(all_predictions).flatten()
 accuracy = np.sum(all_predictions == all_labels) / len(all_labels) * 100
 print(f"Test Accuracy: {accuracy:.2f}%")
 
-# Determine the index for the 'Typical' class, assuming it's the positive class
-# ImageFolder assigns labels alphabetically, so 'Atypical' (0), 'Typical' (1)
-pos_label_idx = dataset.class_to_idx.get('Typical', 1) # Default to 1 if not found, assuming Typical is the positive class
+# Determine the index for the '0_Typical' class, assuming it's the positive class
+# ImageFolder assigns labels alphabetically, so '1_Atypical' (0), '0_Typical' (1)
+pos_label_idx = dataset.class_to_idx.get('0_Typical', 1) # Default to 1 if not found, assuming 0_Typical is the positive class
 # Ensure that all_labels and all_predictions are integers for sklearn metrics
 all_labels_int = all_labels.astype(int)
 all_predictions_int = all_predictions.astype(int)
@@ -326,7 +309,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.show()
 
 # Get class names from the dataset
-class_names = dataset.classes # e.g., ['Atypical', 'Typical']
+class_names = dataset.classes # e.g., ['1_Atypical', '0_Typical']
 
 # Plot the non-normalized confusion matrix
 plot_confusion_matrix(cm, classes=class_names, title='Confusion Matrix')
@@ -337,7 +320,7 @@ plot_confusion_matrix(cm, classes=class_names, title='Confusion Matrix')
 # --- 8. Outputting Classification Results to CSV ---
 csv_filename = "classification_results.csv"
 with open(csv_filename, 'w', newline='') as csvfile:
-    fieldnames = ["Image Path", "True Label", "Predicted Label", "Predicted Probability (Typical)", "Result"]
+    fieldnames = ["Image Path", "True Label", "Predicted Label", "Predicted Probability (0_Typical)", "Result"]
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
     writer.writeheader()
