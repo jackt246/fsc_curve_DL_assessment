@@ -92,15 +92,8 @@ else:
 
 print(f"Using pos_weight: {pos_weight.item():.4f}")
 
-# Create DataLoaders for batching and shuffling
-#
 # Compute sample weights for WeightedRandomSampler to handle class imbalance
-train_labels = []
-if hasattr(train_dataset, 'indices'):
-    # Subset, get labels from indices
-    train_labels = [train_dataset.dataset.samples[i][1] for i in train_dataset.indices]
-else:
-    train_labels = [label for _, label in train_dataset]
+train_labels = [label for _, label in train_dataset]
 class_sample_counts = Counter(train_labels)
 num_samples = len(train_labels)
 weights = [1.0 / class_sample_counts[label] for label in train_labels]
