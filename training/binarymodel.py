@@ -10,6 +10,7 @@ import itertools
 import csv
 from torchvision import models
 from collections import Counter
+from torch.utils.data import WeightedRandomSampler
 import os
 # Fix SSL certificate issue for torchvision model downloads on macOS
 import ssl
@@ -27,13 +28,18 @@ print(f"Using device: {device}")
 MODEL_SAVE_PATH = "../inference/typicality_model.pth"  # Path to save the trained model weights
 
 # Hyperparameters
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 LEARNING_RATE = 1e-3
-NUM_EPOCHS = 25
+NUM_EPOCHS = 50
 
 # Load pretrained EfficientNetV2 with ImageNet1k_V1 weights
 weights = models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
 model = models.efficientnet_v2_s(weights=weights)
+
+if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+    model = nn.DataParallel(model)
+
+model.to(device)
 
 # Separate transforms for training and validation/test
 # Compose training transform with augmentations, then tensor/normalize with weights' mean and std
@@ -87,7 +93,21 @@ else:
 print(f"Using pos_weight: {pos_weight.item():.4f}")
 
 # Create DataLoaders for batching and shuffling
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+#
+# Compute sample weights for WeightedRandomSampler to handle class imbalance
+train_labels = []
+if hasattr(train_dataset, 'indices'):
+    # Subset, get labels from indices
+    train_labels = [train_dataset.dataset.samples[i][1] for i in train_dataset.indices]
+else:
+    train_labels = [label for _, label in train_dataset]
+class_sample_counts = Counter(train_labels)
+num_samples = len(train_labels)
+weights = [1.0 / class_sample_counts[label] for label in train_labels]
+sampler = WeightedRandomSampler(weights, num_samples=num_samples, replacement=True)
+
+# Create DataLoaders for batching
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
