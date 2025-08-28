@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1   # number of tasks
 #SBATCH --cpus-per-task=4   # number of CPUs Per Task i.e if your code is multi-threaded
 #SBATCH --nodes=1   # number of nodes
-#SBATCH --gres=gpu:2
-#SBATCH --mem=100G   # memory per node
+#SBATCH --gres=gpu:4
+#SBATCH --mem=50G   # memory per node
 #SBATCH -J "fsc_DL"   # job name
 #SBATCH -o "output.txt"   # job output file
 

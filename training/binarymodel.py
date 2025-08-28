@@ -201,19 +201,21 @@ for epoch in range(NUM_EPOCHS):
 
     val_loss = val_running_loss / len(val_loader)
     val_accuracy = val_correct_predictions / val_total_predictions * 100
-    val_precision = precision_score(all_val_labels, all_val_preds, zero_division=0)
-    val_recall = recall_score(all_val_labels, all_val_preds, zero_division=0)
-    val_f1 = f1_score(all_val_labels, all_val_preds, zero_division=0)
+    val_precision = precision_score(all_val_labels, all_val_preds, average='macro', zero_division=0)
+    val_recall = recall_score(all_val_labels, all_val_preds, average='macro', zero_division=0)
+    val_f1 = f1_score(all_val_labels, all_val_preds, average='macro', zero_division=0)  # updated
+
     print(f"Validation: Epoch [{epoch + 1}/{NUM_EPOCHS}], "
           f"Loss: {val_loss:.4f}, "
           f"Accuracy: {val_accuracy:.2f}%, "
-          f"Precision: {val_precision:.4f}, "
-          f"Recall: {val_recall:.4f}, "
-          f"F1 Score: {val_f1:.4f}")
+          f"Precision (macro): {val_precision:.4f}, "
+          f"Recall (macro): {val_recall:.4f}, "
+          f"F1 Score (macro): {val_f1:.4f}")
 
+    # Early stopping based on macro F1
     if val_f1 > 0.98:
-        print(f"Stopping early as F1 score reached {val_f1:.4f}")
-        continue
+        print(f"Stopping early as macro F1 score reached {val_f1:.4f}")
+        break
 
 print("Training Complete!")
 
