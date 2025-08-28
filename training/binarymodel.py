@@ -36,6 +36,13 @@ NUM_EPOCHS = 50
 weights = models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
 model = models.efficientnet_v2_s(weights=weights)
 
+# Modify the classifier for binary classification
+num_features = model.classifier[1].in_features
+model.classifier[1] = nn.Linear(num_features, 1)
+
+# Send to device
+model = model.to(device)
+
 if torch.cuda.is_available() and torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
 
@@ -108,14 +115,6 @@ print(f"Training samples: {len(train_dataset)}")
 print(f"Validation samples: {len(val_dataset)}")
 print(f"Testing samples: {len(test_dataset)}")
 
-
-
-# Modify the classifier for binary classification
-num_features = model.classifier[1].in_features
-model.classifier[1] = nn.Linear(num_features, 1)
-
-# Send to device
-model = model.to(device)
 print("\nModel Architecture:")
 print(model)
 
