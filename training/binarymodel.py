@@ -123,7 +123,8 @@ print(model)
 # It's more numerically stable than using Sigmoid + BCELoss separately.
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=1e-4)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+#optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=1e-4)
 
 # --- 5. Training the Model ---
 print("\nStarting Training...")
