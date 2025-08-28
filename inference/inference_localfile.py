@@ -5,7 +5,7 @@ from PIL import Image
 
 model_path = 'typicality_model.pth'
 image_path = 'EMD-19436.png'
-class_names = ['Atypical', 'Typical']
+class_names = ['1_Atypical', '0_Typical']
 
 
 # Match the architecture you trained with

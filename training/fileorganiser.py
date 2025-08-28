@@ -26,8 +26,8 @@ def get_label_studio_information(csv_path):
 
     # Extract the desired classification type from the 'choice' column
     classes['Type'] = None
-    classes.loc[classes['choice'].str.contains('Typical', case=False, na=False), 'Type'] = 'Typical'
-    classes.loc[classes['choice'].str.contains('Atypical', case=False, na=False), 'Type'] = 'Atypical'
+    classes.loc[classes['choice'].str.contains('0_Typical', case=False, na=False), 'Type'] = '0_Typical'
+    classes.loc[classes['choice'].str.contains('1_Atypical', case=False, na=False), 'Type'] = '1_Atypical'
     type_presence_condition = classes['Type'].notna()
 
     filtered_rows_df = classes[image_presence_condition & type_presence_condition].copy()

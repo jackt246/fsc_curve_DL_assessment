@@ -10,7 +10,7 @@ import ast
 from datetime import datetime, timedelta, timezone
 
 model_path = 'typicality_model.pth'
-class_names = ['Atypical', 'Typical']
+class_names = ['1_Atypical', '0_Typical']
 
 def previous_wednesday():
     today = datetime.now(timezone.utc).date()

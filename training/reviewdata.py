@@ -16,12 +16,12 @@ df_filtered = df[df['Result'] == 'Incorrect']
 print(len(df_filtered))
 
 
-# Plot Predicted Probability (Typical) by index, colored by True Label
+# Plot Predicted Probability (0_Typical) by index, colored by True Label
 plt.figure(figsize=(8,6))
-sns.scatterplot(data=df_filtered, x=df_filtered.index, y='Predicted Probability (Typical)', hue='True Label', palette='Set1')
-plt.title('Predicted Probability (Typical) by True Label')
+sns.scatterplot(data=df_filtered, x=df_filtered.index, y='Predicted Probability (0_Typical)', hue='True Label', palette='Set1')
+plt.title('Predicted Probability (0_Typical) by True Label')
 plt.xlabel('Index')
-plt.ylabel('Predicted Probability (Typical)')
+plt.ylabel('Predicted Probability (0_Typical)')
 plt.legend(title='True Label')
 plt.tight_layout()
 plt.show()

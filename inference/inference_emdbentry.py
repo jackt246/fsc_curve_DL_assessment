@@ -10,7 +10,7 @@ import ast
 
 model_path = 'typicality_model.pth'
 emdb_entry = 'EMD-12345'
-class_names = ['Atypical', 'Typical']
+class_names = ['1_Atypical', '0_Typical']
 
 # initialise the EMDB client and get entry
 client = EMDB()
