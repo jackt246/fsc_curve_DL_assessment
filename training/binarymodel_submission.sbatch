@@ -26,7 +26,7 @@ module load cuda/11.8.0
 LOGGER_PID=$!
 
 export TORCH_HOME=/hps/nobackup/gerard/emdb/fsc_curve_DL_assessment/
-python binarymodel.py
+python -u binarymodel.py
 
 # stop the logging loop
 kill $LOGGER_PID
