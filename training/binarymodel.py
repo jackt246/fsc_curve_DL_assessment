@@ -106,8 +106,8 @@ print(model)
 # It's more numerically stable than using Sigmoid + BCELoss separately.
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
-#optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=1e-4)
+#optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=1e-4)
 
 # --- 5. Training the Model ---
 print("\nStarting Training...")
@@ -197,7 +197,7 @@ for epoch in range(NUM_EPOCHS):
           f"F1 Score (macro): {val_f1:.4f}")
 
     # Early stopping based on macro F1
-    if val_f1 > 0.9:
+    if val_f1 > 0.92:
         print(f"Stopping early as macro F1 score reached {val_f1:.4f}")
         break
 
