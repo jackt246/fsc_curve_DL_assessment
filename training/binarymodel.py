@@ -197,7 +197,7 @@ for epoch in range(NUM_EPOCHS):
           f"F1 Score (macro): {val_f1:.4f}")
 
     # Early stopping based on macro F1
-    if val_f1 > 0.92:
+    if val_f1 > 0.96:
         print(f"Stopping early as macro F1 score reached {val_f1:.4f}")
         break
 
