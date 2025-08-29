@@ -30,7 +30,7 @@ MODEL_SAVE_PATH = "../inference/typicality_model.pth"  # Path to save the traine
 # Hyperparameters
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-NUM_EPOCHS = 100
+NUM_EPOCHS = 200
 
 # Load pretrained EfficientNetV2 with ImageNet1k_V1 weights
 weights = models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
