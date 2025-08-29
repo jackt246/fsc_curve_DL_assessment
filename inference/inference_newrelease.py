@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import ast
 from datetime import datetime, timedelta, timezone
+import torch.nn as nn
 
-model_path = 'typicality_model.pth'
+model_path = 'typicality_model_sgd_f1_094.pth'
 class_names = ['1_Atypical', '0_Typical']
 
 def previous_wednesday():
@@ -82,13 +83,9 @@ for entry in results:
     plt.legend()
     plt.savefig('emdb_entry.png')
 
-
-    # Match the architecture you trained with
-    model = models.efficientnet_v2_s(weights=None)
-    model.classifier[1] = torch.nn.Linear(in_features=1280, out_features=1)  # Binary classification
-
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    model.eval()  # Set to evaluation mode
+    # Load the full model
+    model = torch.load(model_path, map_location='cpu')
+    model.eval()
 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),  # match training size
