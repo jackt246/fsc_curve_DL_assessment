@@ -28,9 +28,9 @@ print(f"Using device: {device}")
 MODEL_SAVE_PATH = "../inference/typicality_model.pth"  # Path to save the trained model weights
 
 # Hyperparameters
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 
 # Load pretrained EfficientNetV2 with ImageNet1k_V1 weights
 weights = models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
@@ -329,10 +329,9 @@ with open(csv_filename, 'w', newline='') as csvfile:
 print(f"\nClassification results saved to {csv_filename}")
 
 
-# --- 9. Saving the Model Weights ---
-print(f"\nSaving model weights to {MODEL_SAVE_PATH}...")
-torch.save(model.state_dict(), MODEL_SAVE_PATH)
-print("Model weights saved successfully.")
+# Save the full model
+torch.save(model, MODEL_SAVE_PATH)
+print("Full model saved successfully.")
 
 # --- Optional: Clean up dummy data ---
 # shutil.rmtree("data")
