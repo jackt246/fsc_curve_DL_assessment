@@ -4,15 +4,11 @@ import pandas as pd
 from tqdm import tqdm
 import os
 
-# initialize the EMDB client
+file = 'missing_files.txt'
 client = EMDB()
-
-# Search for entries with a half map filename
-results = client.search('half_map_filename:[* TO *]')
-
 # Define the chunk size for saving data
 chunk_size = 100
-output_csv = 'data.csv'
+output_csv = 'missing_data.csv'
 failed_entries_file = 'failed_entries.txt'
 
 # prep containers for data and failed entries
@@ -67,17 +63,17 @@ def main():
         loaded_failed_entries = set()
     failed_entries = []
 
+    with open(file, "r") as f:
+        results = [line.strip() for line in f if line.strip()]
+
     # Process entries in chunks
     for i in tqdm(range(start_index, len(results)), initial=start_index, total=len(results),
                       desc="Processing entries"):
-        entry = results[i]
-        if entry.id in failed_entries:
-            print(f"Skipping failed entry {entry.id}")
-            continue
-
+        current_entry = results[i]
+        entry = client.get_entry(current_entry)
         result = process_entry(entry)
         if result is None:
-            failed_entries.append(entry.id)
+            failed_entries.append(entry)
         else:
             data.append(result)
 

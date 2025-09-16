@@ -10,8 +10,8 @@ import ast
 from datetime import datetime, timedelta, timezone
 import torch.nn as nn
 
-model_path = 'typicality_model_sgd_f1_094.pth'
-class_names = ['1_Atypical', '0_Typical']
+model_path = 'typicality_model_fullmodel.pth'
+class_names = ['0_Typical', '1_Atypical']
 
 def previous_wednesday():
     today = datetime.now(timezone.utc).date()
@@ -84,11 +84,15 @@ for entry in results:
     plt.savefig('emdb_entry.png')
 
     # Load the full model
-    model = torch.load(model_path, map_location='cpu')
+    model = torch.load(model_path, map_location='cpu', weights_only=False)
+    device = torch.device("cpu")
+    # If trained with DataParallel, adjust accordingly to unwrap and run on a single device
+    if isinstance(model, torch.nn.DataParallel):
+        model = model.module
     model.eval()
 
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),  # match training size
+        transforms.Resize((536, 395)),  # match training size
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],  # ImageNet normalization
                              std=[0.229, 0.224, 0.225])

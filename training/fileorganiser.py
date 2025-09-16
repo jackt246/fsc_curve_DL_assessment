@@ -26,8 +26,8 @@ def get_label_studio_information(csv_path):
 
     # Extract the desired classification type from the 'choice' column
     classes['Type'] = None
-    classes.loc[classes['choice'].str.contains('0_Typical', case=False, na=False), 'Type'] = '0_Typical'
-    classes.loc[classes['choice'].str.contains('1_Atypical', case=False, na=False), 'Type'] = '1_Atypical'
+    classes.loc[classes['choice'].str.contains('Typical', case=False, na=False), 'Type'] = '0_Typical'
+    classes.loc[classes['choice'].str.contains('Atypical', case=False, na=False), 'Type'] = '1_Atypical'
     type_presence_condition = classes['Type'].notna()
 
     filtered_rows_df = classes[image_presence_condition & type_presence_condition].copy()
@@ -42,6 +42,9 @@ def get_label_studio_information(csv_path):
 
 df = get_label_studio_information('../Labelling/project-1-at-2025-08-19-07-53-06d9b5d0.csv')
 
+# Track missing files
+missing_files = []
+
 for i in range(len(df)):
     emd_id = df.iloc[i]['EMD-ID']
     choice = df.iloc[i]['Type']
@@ -51,5 +54,12 @@ for i in range(len(df)):
         shutil.copy(fsc_path, target_path)
     else:
         print(f"File not found: {fsc_path}, skipping...")
+        missing_files.append(emd_id)
         continue
     print(f"Processed EMD-ID: {emd_id}, Type: {choice}")
+
+# Write missing files to a text file
+with open("../dataprepscripts/missing_files.txt", "w") as f:
+    for missing_id in missing_files:
+        f.write(missing_id + "\n")
+print(f"Missing file list saved to missing_files.txt")
